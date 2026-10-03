@@ -23,6 +23,8 @@ services:
       DATABASE_URL: postgresql+asyncpg://app:app@postgres:5432/support
     ports:
       - "8000:8000"
+    volumes:
+      - ./backend:/app
     depends_on:
       postgres:
         condition: service_healthy
