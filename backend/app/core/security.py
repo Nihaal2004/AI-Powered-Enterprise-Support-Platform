@@ -1,7 +1,8 @@
 from datetime import datetime, timedelta, timezone
 import os
 import uuid
-
+import hashlib
+import secrets
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 
@@ -19,6 +20,12 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 15
 def hash_password(password: str) -> str:
     return pwd_context.hash(password)
 
+def create_refresh_token() -> str:
+    return secrets.token_urlsafe(64)
+
+
+def hash_refresh_token(token: str) -> str:
+    return hashlib.sha256(token.encode()).hexdigest()
 
 def verify_password(
     plain_password: str,
