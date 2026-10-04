@@ -6,7 +6,6 @@ from app.models.ticket import CustomerUrgency
 
 
 class TicketCreate(BaseModel):
-    customer_id: uuid.UUID
     primary_category_id: uuid.UUID
     title: str = Field(min_length=3, max_length=255)
     initial_message: str = Field(min_length=1)

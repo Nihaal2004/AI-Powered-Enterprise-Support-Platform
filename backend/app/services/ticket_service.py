@@ -24,14 +24,14 @@ class TicketService:
     async def get_ticket(self, ticket_id: uuid.UUID) -> Ticket | None:
         return await self.ticket_repository.get_by_id(ticket_id)
 
-    async def create_ticket(self, data: TicketCreate) -> Ticket:
+    async def create_ticket(self, data: TicketCreate, customer_id : uuid.UUID,) -> Ticket:
         now = datetime.now(timezone.utc)
 
         try:
             # 1. Create the ticket
             ticket = Ticket(
-                customer_id=data.customer_id,
-                created_by_user_id=data.customer_id,
+                customer_id=customer_id,
+                created_by_user_id=customer_id,
                 primary_category_id=data.primary_category_id,
                 title=data.title,
                 customer_urgency=data.customer_urgency,
@@ -52,7 +52,7 @@ class TicketService:
             # 3. Create the first conversation message
             initial_message = TicketMessage(
                 ticket_id=ticket.id,
-                author_user_id=data.customer_id,
+                author_user_id=customer_id,
                 message_type=MessageType.CUSTOMER_REPLY,
                 body=data.initial_message,
                 created_at=now,
