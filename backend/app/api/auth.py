@@ -148,6 +148,31 @@ async def refresh(
             detail=str(exc),
         ) from exc
 
+    
+@router.post(
+    "/logout",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+async def logout(
+    request: Request,
+    response: Response,
+    db: AsyncSession = Depends(get_db),
+):
+    raw_refresh_token = request.cookies.get(
+        "refresh_token"
+    )
+
+    if raw_refresh_token is not None:
+        service = AuthService(db)
+
+        await service.logout(
+            raw_refresh_token
+        )
+
+    response.delete_cookie(
+        key="refresh_token",
+        path="/auth",
+    )
 
 @router.get(
     "/me",

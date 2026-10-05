@@ -1,15 +1,8 @@
-from sqlalchemy.ext.asyncio import AsyncSession
-
-from app.core.security import (
-    create_access_token,
-    hash_password,
-    verify_password,
-)
-
 import uuid
 from datetime import datetime, timedelta, timezone
 
-from app.models.refresh_session import RefreshSession
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.core.security import (
     create_access_token,
     create_refresh_token,
@@ -17,11 +10,12 @@ from app.core.security import (
     hash_refresh_token,
     verify_password,
 )
+from app.models.customer import Customer
+from app.models.refresh_session import RefreshSession
+from app.models.user import User, UserRole
 from app.repositories.refresh_session_repository import (
     RefreshSessionRepository,
 )
-from app.models.customer import Customer
-from app.models.user import User, UserRole
 from app.repositories.user_repository import UserRepository
 from app.schemas.auth import LoginRequest, RegisterRequest
 
@@ -32,14 +26,19 @@ class AuthService:
         self.user_repository = UserRepository(db)
         self.refresh_session_repository = RefreshSessionRepository(db)
 
-    async def register_customer(self, data: RegisterRequest) -> User:
-        existing_user = await self.user_repository.get_by_email(data.email)
+    async def register_customer(
+        self,
+        data: RegisterRequest,
+    ) -> User:
+        email = data.email.lower()
+
+        existing_user = await self.user_repository.get_by_email(email)
 
         if existing_user is not None:
             raise ValueError("Email already registered")
 
         user = User(
-            email=data.email.lower(),
+            email=email,
             name=data.name,
             password_hash=hash_password(data.password),
             role=UserRole.CUSTOMER,
@@ -64,12 +63,15 @@ class AuthService:
             await self.db.rollback()
             raise
 
-    async def login(self, data: LoginRequest, user_agent: str | None = None, ip_address: str | None = None,
-) -> tuple[User, str, str]:
+    async def login(
+        self,
+        data: LoginRequest,
+        user_agent: str | None = None,
+        ip_address: str | None = None,
+    ) -> tuple[User, str, str]:
+        email = data.email.lower()
 
-        user = await self.user_repository.get_by_email(
-            data.email.lower()
-        )
+        user = await self.user_repository.get_by_email(email)
 
         if user is None:
             raise ValueError("Invalid email or password")
@@ -106,20 +108,31 @@ class AuthService:
             ip_address=ip_address,
         )
 
-        self.db.add(session)
-        await self.db.commit()
+        try:
+            self.db.add(session)
+            await self.db.commit()
 
-        return user, access_token, refresh_token
+        except Exception:
+            await self.db.rollback()
+            raise
 
-    
-    async def refresh(self, raw_refresh_token: str,) -> tuple[str, str]:
+        return (
+            user,
+            access_token,
+            refresh_token,
+        )
 
+    async def refresh(
+        self,
+        raw_refresh_token: str,
+    ) -> tuple[str, str]:
         now = datetime.now(timezone.utc)
 
         token_hash = hash_refresh_token(raw_refresh_token)
 
         session = (
-            await self.refresh_session_repository.get_by_token_hash_for_update(
+            await self.refresh_session_repository
+            .get_by_token_hash_for_update(
                 token_hash
             )
         )
@@ -127,11 +140,11 @@ class AuthService:
         if session is None:
             raise ValueError("Invalid refresh token")
 
-        # Already revoked
         if session.revoked_at is not None:
             raise ValueError("Refresh session revoked")
 
-        # Token has already been consumed -> possible token theft/reuse
+        # A refresh token may only be used once.
+        # Reuse suggests that an old token may have been stolen.
         if session.used_at is not None:
             await self.refresh_session_repository.revoke_family(
                 family_id=session.family_id,
@@ -144,19 +157,27 @@ class AuthService:
                 "Refresh token reuse detected"
             )
 
-        # Absolute session lifetime
+        # Absolute lifetime of this login session.
         if now >= session.expires_at:
             session.revoked_at = now
+
             await self.db.commit()
 
-            raise ValueError("Refresh session expired")
+            raise ValueError(
+                "Refresh session expired"
+            )
 
-        # 60 minute idle timeout
+        # Each refresh token must be used within 60 minutes.
+        # Successful rotation creates a new session with a new created_at,
+        # while the absolute 8-hour expires_at remains unchanged.
         if now >= session.created_at + timedelta(minutes=60):
             session.revoked_at = now
+
             await self.db.commit()
 
-            raise ValueError("Refresh session idle timeout")
+            raise ValueError(
+                "Refresh session idle timeout"
+            )
 
         user = await self.user_repository.get_by_id(
             session.user_id
@@ -164,9 +185,12 @@ class AuthService:
 
         if user is None or not user.is_active:
             session.revoked_at = now
+
             await self.db.commit()
 
-            raise ValueError("User unavailable")
+            raise ValueError(
+                "User unavailable"
+            )
 
         new_access_token = create_access_token(
             user_id=user.id,
@@ -177,22 +201,24 @@ class AuthService:
 
         new_session = RefreshSession(
             id=uuid.uuid4(),
+
             user_id=user.id,
+
             token_hash=hash_refresh_token(
                 new_raw_refresh_token
             ),
 
-            # SAME family
+            # Same login-session family.
             family_id=session.family_id,
 
-            # Previous token is its parent
+            # Current token becomes the parent of the new token.
             parent_session_id=session.id,
 
             replaced_by_session_id=None,
 
             created_at=now,
 
-            # Important: DO NOT extend absolute 8-hour lifetime
+            # Do not extend the original 8-hour session lifetime.
             expires_at=session.expires_at,
 
             used_at=None,
@@ -202,22 +228,57 @@ class AuthService:
             ip_address=session.ip_address,
         )
 
-        self.db.add(new_session)
+        try:
+            self.db.add(new_session)
 
-        # Force ONLY the new refresh session (R2) into PostgreSQL first
-        await self.db.flush([new_session])
+            # Insert the new session first.
+            # PostgreSQL must know R2 exists before R1 can reference R2.
+            await self.db.flush([new_session])
 
-        # R2 now exists, so R1 can safely reference it
-        session.used_at = now
-        session.replaced_by_session_id = new_session.id
+            # Mark the old refresh token as consumed.
+            session.used_at = now
 
-        # Push the R1 update
-        await self.db.flush()
+            # Link old token -> new token.
+            session.replaced_by_session_id = new_session.id
 
-        # Commit both operations atomically
-        await self.db.commit()
+            await self.db.flush()
+
+            # R1 update + R2 creation are committed atomically.
+            await self.db.commit()
+
+        except Exception:
+            await self.db.rollback()
+            raise
 
         return (
             new_access_token,
             new_raw_refresh_token,
         )
+    async def logout(
+        self,
+        raw_refresh_token: str,
+    ) -> None:
+        now = datetime.now(timezone.utc)
+
+        token_hash = hash_refresh_token(
+            raw_refresh_token
+        )
+
+        session = await self.refresh_session_repository.get_by_token_hash(
+            token_hash
+        )
+
+        if session is None:
+            return
+
+        await self.refresh_session_repository.revoke_family(
+            family_id=session.family_id,
+            revoked_at=now,
+        )
+
+        try:
+            await self.db.commit()
+
+        except Exception:
+            await self.db.rollback()
+            raise

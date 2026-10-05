@@ -31,3 +31,12 @@ class RefreshSessionRepository:
             .where(RefreshSession.revoked_at.is_(None))
             .values(revoked_at=revoked_at)
         )
+
+    async def get_by_token_hash(self, token_hash: str,) -> RefreshSession | None:
+        result = await self.db.execute(
+            select(RefreshSession).where(
+                RefreshSession.token_hash == token_hash
+            )
+        )
+
+        return result.scalar_one_or_none()
