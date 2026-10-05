@@ -82,10 +82,19 @@ class TicketService:
         if ticket is None:
             raise ValueError("Ticket not found")
 
-        if ticket.customer_id != current_user.id:
+        if current_user.role == UserRole.CUSTOMER:
+            if ticket.customer_id != current_user.id:
+                raise PermissionError("You cannot access this ticket")
+
+        elif current_user.role in (UserRole.AGENT, UserRole.ADMIN):
+            pass
+
+        else:
             raise PermissionError("You cannot access this ticket")
 
         return await self.ticket_repository.get_messages(ticket_id)
+
+    
     async def add_message(
         self,
         ticket_id: uuid.UUID,
@@ -98,15 +107,32 @@ class TicketService:
         if ticket is None:
             raise ValueError("Ticket not found")
 
-        if ticket.customer_id != current_user.id:
-            raise PermissionError("You cannot access this ticket")
+        if current_user.role == UserRole.CUSTOMER:
+            if ticket.customer_id != current_user.id:
+                raise PermissionError("You cannot access this ticket")
+
+            message_type = MessageType.CUSTOMER_REPLY
+
+        elif current_user.role == UserRole.AGENT:
+            if ticket.assigned_agent_id != current_user.id:
+                raise PermissionError(
+                    "Only the assigned agent can reply to this ticket"
+                )
+
+            message_type = MessageType.AGENT_REPLY
+
+        elif current_user.role == UserRole.ADMIN:
+            message_type = MessageType.AGENT_REPLY
+
+        else:
+            raise PermissionError("You cannot reply to this ticket")
 
         now = datetime.now(timezone.utc)
 
         message = TicketMessage(
             ticket_id=ticket.id,
             author_user_id=current_user.id,
-            message_type=MessageType.CUSTOMER_REPLY,
+            message_type=message_type,
             body=body,
             created_at=now,
         )
