@@ -10,7 +10,8 @@ from app.models.ticket import (
 from app.models.ticket_message import TicketMessage, MessageType
 from app.repositories.ticket_repository import TicketRepository
 from app.schemas.ticket import TicketCreate
-
+from app.models.ticket_assignment_history import TicketAssignmentHistory
+from app.models.user import User, UserRole
 import uuid
 from app.models.user import User
 
@@ -126,3 +127,71 @@ class TicketService:
         except Exception:
             await self.db.rollback()
             raise
+
+    async def claim_ticket(
+        self,
+        ticket_id: uuid.UUID,
+        current_user: User,
+    ) -> Ticket:
+        if current_user.role != UserRole.AGENT:
+            raise PermissionError("Only agents can claim tickets")
+
+        now = datetime.now(timezone.utc)
+
+        try:
+            ticket = await self.ticket_repository.claim_ticket(
+                ticket_id=ticket_id,
+                agent_id=current_user.id,
+            )
+
+            if ticket is None:
+                raise RuntimeError(
+                    "Ticket is already assigned or does not exist"
+                )
+
+            history = TicketAssignmentHistory(
+                ticket_id=ticket.id,
+                from_agent_id=None,
+                to_agent_id=current_user.id,
+                changed_by_user_id=current_user.id,
+                reason="Agent claimed ticket",
+                changed_at=now,
+            )
+
+            self.db.add(history)
+
+            await self.db.commit()
+            await self.db.refresh(ticket)
+
+            return ticket
+
+        except Exception:
+            await self.db.rollback()
+            raise
+
+    async def list_tickets(
+        self,
+        current_user: User,
+        unassigned: bool = False,
+        assigned_to_me: bool = False,
+    ) -> list[Ticket]:
+
+        if current_user.role != UserRole.AGENT:
+            raise PermissionError("Only agents can use this ticket queue")
+
+        if unassigned and assigned_to_me:
+            raise ValueError(
+                "Choose either unassigned or assigned_to_me"
+            )
+
+        if unassigned:
+            return await self.ticket_repository.list_unassigned()
+
+        if assigned_to_me:
+            return await self.ticket_repository.list_assigned_to_agent(
+                current_user.id
+            )
+
+        raise ValueError(
+            "Specify unassigned=true or assigned_to_me=true"
+        )

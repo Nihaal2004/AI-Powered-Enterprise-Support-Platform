@@ -110,3 +110,63 @@ async def add_message(
             status_code=403,
             detail=str(exc),
         ) from exc
+
+@router.post(
+    "/{ticket_id}/claim",
+    response_model=TicketResponse,
+)
+async def claim_ticket(
+    ticket_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    service = TicketService(db)
+
+    try:
+        return await service.claim_ticket(
+            ticket_id=ticket_id,
+            current_user=current_user,
+        )
+
+    except PermissionError as exc:
+        raise HTTPException(
+            status_code=403,
+            detail=str(exc),
+        ) from exc
+
+    except RuntimeError as exc:
+        raise HTTPException(
+            status_code=409,
+            detail=str(exc),
+        ) from exc
+
+@router.get(
+    "",
+    response_model=list[TicketResponse],
+)
+async def list_tickets(
+    unassigned: bool = False,
+    assigned_to_me: bool = False,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    service = TicketService(db)
+
+    try:
+        return await service.list_tickets(
+            current_user=current_user,
+            unassigned=unassigned,
+            assigned_to_me=assigned_to_me,
+        )
+
+    except PermissionError as exc:
+        raise HTTPException(
+            status_code=403,
+            detail=str(exc),
+        ) from exc
+
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=400,
+            detail=str(exc),
+        ) from exc

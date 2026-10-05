@@ -1,46 +1,40 @@
 import asyncio
 import uuid
 
-from sqlalchemy.ext.asyncio import AsyncSession
-
+from app.core.security import hash_password
 from app.db.session import AsyncSessionLocal
-from app.models.customer import Customer
-from app.models.ticket_category import TicketCategory
+from app.models.agent import Agent
 from app.models.user import User, UserRole
 
 
 async def seed():
     async with AsyncSessionLocal() as db:
-        customer_user = User(
+        agent_user = User(
             id=uuid.uuid4(),
-            email="customer@example.com",
-            name="Test Customer",
-            password_hash="not-real-yet",
-            role=UserRole.CUSTOMER,
+            email="agent@example.com",
+            name="Test Agent",
+            password_hash=hash_password("AgentPass123"),
+            role=UserRole.AGENT,
             is_active=True,
         )
 
-        db.add(customer_user)
-        await db.flush()
+        try:
+            db.add(agent_user)
+            await db.flush()
 
-        customer = Customer(
-            user_id=customer_user.id,
-        )
+            agent = Agent(
+                user_id=agent_user.id,
+            )
 
-        category = TicketCategory(
-            id=uuid.uuid4(),
-            name="Technical Support",
-            description="Technical issues",
-            is_active=True,
-        )
+            db.add(agent)
 
-        db.add(customer)
-        db.add(category)
+            await db.commit()
 
-        await db.commit()
+            print("Agent ID:", agent_user.id)
 
-        print("Customer ID:", customer_user.id)
-        print("Category ID:", category.id)
+        except Exception:
+            await db.rollback()
+            raise
 
 
 if __name__ == "__main__":

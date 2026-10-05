@@ -15,6 +15,7 @@ class TicketCreate(BaseModel):
 class TicketResponse(BaseModel):
     id: uuid.UUID
     customer_id: uuid.UUID
+    assigned_agent_id: uuid.UUID | None
     primary_category_id: uuid.UUID
     title: str
     customer_urgency: CustomerUrgency
