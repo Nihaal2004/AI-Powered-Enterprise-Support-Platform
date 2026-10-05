@@ -12,7 +12,7 @@ from app.repositories.ticket_repository import TicketRepository
 from app.schemas.ticket import TicketCreate
 
 import uuid
-
+from app.models.user import User
 
 
 
@@ -67,5 +67,62 @@ class TicketService:
 
         except Exception:
             # If either operation fails, undo the entire transaction
+            await self.db.rollback()
+            raise
+
+    async def get_messages(
+        self,
+        ticket_id: uuid.UUID,
+        current_user: User,
+    ) -> list[TicketMessage]:
+
+        ticket = await self.ticket_repository.get_by_id(ticket_id)
+
+        if ticket is None:
+            raise ValueError("Ticket not found")
+
+        if ticket.customer_id != current_user.id:
+            raise PermissionError("You cannot access this ticket")
+
+        return await self.ticket_repository.get_messages(ticket_id)
+    async def add_message(
+        self,
+        ticket_id: uuid.UUID,
+        body: str,
+        current_user: User,
+    ) -> TicketMessage:
+
+        ticket = await self.ticket_repository.get_by_id(ticket_id)
+
+        if ticket is None:
+            raise ValueError("Ticket not found")
+
+        if ticket.customer_id != current_user.id:
+            raise PermissionError("You cannot access this ticket")
+
+        now = datetime.now(timezone.utc)
+
+        message = TicketMessage(
+            ticket_id=ticket.id,
+            author_user_id=current_user.id,
+            message_type=MessageType.CUSTOMER_REPLY,
+            body=body,
+            created_at=now,
+        )
+
+        try:
+            self.db.add(message)
+
+            ticket.conversation_version += 1
+            ticket.conversation_updated_at = now
+            ticket.last_message_at = now
+            ticket.updated_at = now
+
+            await self.db.commit()
+            await self.db.refresh(message)
+
+            return message
+
+        except Exception:
             await self.db.rollback()
             raise

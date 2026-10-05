@@ -8,6 +8,7 @@ import uuid
 from app.api.dependencies import get_current_user
 from app.models.user import User, UserRole
 from fastapi import HTTPException
+from app.schemas.message import MessageCreate, MessageResponse
 router = APIRouter(
     prefix="/tickets",
     tags=["tickets"],
@@ -48,3 +49,64 @@ async def create_ticket(
     )
 
     return ticket
+
+@router.get(
+    "/{ticket_id}/messages",
+    response_model=list[MessageResponse],
+)
+async def get_messages(
+    ticket_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    service = TicketService(db)
+
+    try:
+        return await service.get_messages(
+            ticket_id,
+            current_user,
+        )
+
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=404,
+            detail=str(exc),
+        ) from exc
+
+    except PermissionError as exc:
+        raise HTTPException(
+            status_code=403,
+            detail=str(exc),
+        ) from exc
+
+@router.post(
+    "/{ticket_id}/messages",
+    response_model=MessageResponse,
+    status_code=201,
+)
+async def add_message(
+    ticket_id: uuid.UUID,
+    data: MessageCreate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    service = TicketService(db)
+
+    try:
+        return await service.add_message(
+            ticket_id=ticket_id,
+            body=data.body,
+            current_user=current_user,
+        )
+
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=404,
+            detail=str(exc),
+        ) from exc
+
+    except PermissionError as exc:
+        raise HTTPException(
+            status_code=403,
+            detail=str(exc),
+        ) from exc
