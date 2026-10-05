@@ -9,6 +9,7 @@ from app.api.dependencies import get_current_user
 from app.models.user import User, UserRole
 from fastapi import HTTPException
 from app.schemas.message import MessageCreate, MessageResponse
+from app.schemas.ticket import TicketStatusUpdate, TicketPriorityUpdate
 router = APIRouter(
     prefix="/tickets",
     tags=["tickets"],
@@ -168,5 +169,74 @@ async def list_tickets(
     except ValueError as exc:
         raise HTTPException(
             status_code=400,
+            detail=str(exc),
+        ) from exc
+
+@router.patch(
+    "/{ticket_id}/status",
+    response_model=TicketResponse,
+)
+async def update_status(
+    ticket_id: uuid.UUID,
+    data: TicketStatusUpdate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    service = TicketService(db)
+
+    try:
+        return await service.update_status(
+            ticket_id=ticket_id,
+            new_status=data.status,
+            current_user=current_user,
+        )
+
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=404,
+            detail=str(exc),
+        ) from exc
+
+    except PermissionError as exc:
+        raise HTTPException(
+            status_code=403,
+            detail=str(exc),
+        ) from exc
+
+    except RuntimeError as exc:
+        raise HTTPException(
+            status_code=409,
+            detail=str(exc),
+        ) from exc
+
+@router.patch(
+    "/{ticket_id}/priority",
+    response_model=TicketResponse,
+)
+async def update_priority(
+    ticket_id: uuid.UUID,
+    data: TicketPriorityUpdate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    service = TicketService(db)
+
+    try:
+        return await service.update_priority(
+            ticket_id=ticket_id,
+            new_priority=data.priority,
+            reason=data.reason,
+            current_user=current_user,
+        )
+
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=404,
+            detail=str(exc),
+        ) from exc
+
+    except PermissionError as exc:
+        raise HTTPException(
+            status_code=403,
             detail=str(exc),
         ) from exc

@@ -3,6 +3,7 @@ import uuid
 from pydantic import BaseModel, Field
 
 from app.models.ticket import CustomerUrgency
+from app.models.ticket import TicketStatus, TicketPriority
 
 
 class TicketCreate(BaseModel):
@@ -25,3 +26,11 @@ class TicketResponse(BaseModel):
     model_config = {
         "from_attributes": True
     }
+
+class TicketStatusUpdate(BaseModel):
+    status: TicketStatus
+
+
+class TicketPriorityUpdate(BaseModel):
+    priority: TicketPriority
+    reason: str | None = None

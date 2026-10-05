@@ -14,8 +14,33 @@ from app.models.ticket_assignment_history import TicketAssignmentHistory
 from app.models.user import User, UserRole
 import uuid
 from app.models.user import User
+from app.models.ticket_priority_history import TicketPriorityHistory
 
-
+VALID_STATUS_TRANSITIONS = {
+    TicketStatus.OPEN: {
+        TicketStatus.IN_PROGRESS,
+        TicketStatus.RESOLVED,
+    },
+    TicketStatus.IN_PROGRESS: {
+        TicketStatus.WAITING_FOR_CUSTOMER,
+        TicketStatus.RESOLVED,
+    },
+    TicketStatus.WAITING_FOR_CUSTOMER: {
+        TicketStatus.IN_PROGRESS,
+        TicketStatus.RESOLVED,
+    },
+    TicketStatus.RESOLVED: {
+        TicketStatus.IN_PROGRESS,
+        TicketStatus.CLOSED,
+    },
+    TicketStatus.CLOSED: set(),
+}
+PRIORITY_RANK = {
+    TicketPriority.LOW: 1,
+    TicketPriority.MEDIUM: 2,
+    TicketPriority.HIGH: 3,
+    TicketPriority.CRITICAL: 4,
+}
 
 class TicketService:
     def __init__(self, db: AsyncSession):
@@ -221,3 +246,128 @@ class TicketService:
         raise ValueError(
             "Specify unassigned=true or assigned_to_me=true"
         )
+
+    async def update_status(
+        self,
+        ticket_id: uuid.UUID,
+        new_status: TicketStatus,
+        current_user: User,
+    ) -> Ticket:
+
+        ticket = await self.ticket_repository.get_by_id(ticket_id)
+
+        if ticket is None:
+            raise ValueError("Ticket not found")
+
+        if current_user.role == UserRole.AGENT:
+            if ticket.assigned_agent_id != current_user.id:
+                raise PermissionError(
+                    "Only the assigned agent can change ticket status"
+                )
+
+        elif current_user.role != UserRole.ADMIN:
+            raise PermissionError(
+                "You cannot change ticket status"
+            )
+
+        allowed = VALID_STATUS_TRANSITIONS[ticket.status]
+
+        if new_status not in allowed:
+            raise RuntimeError(
+                f"Invalid status transition: "
+                f"{ticket.status.value} -> {new_status.value}"
+            )
+
+        now = datetime.now(timezone.utc)
+
+        old_status = ticket.status
+
+        if new_status not in VALID_STATUS_TRANSITIONS[old_status]:
+            raise RuntimeError(
+                f"Invalid status transition: "
+                f"{old_status.value} -> {new_status.value}"
+            )
+
+        ticket.status = new_status
+        ticket.updated_at = now
+
+        if new_status == TicketStatus.RESOLVED:
+            ticket.resolved_at = now
+
+        elif old_status == TicketStatus.RESOLVED:
+            ticket.resolved_at = None
+
+        if new_status == TicketStatus.CLOSED:
+            ticket.closed_at = now
+
+        try:
+            await self.db.commit()
+            await self.db.refresh(ticket)
+
+            return ticket
+
+        except Exception:
+            await self.db.rollback()
+            raise
+
+    async def update_priority(
+        self,
+        ticket_id: uuid.UUID,
+        new_priority: TicketPriority,
+        reason: str | None,
+        current_user: User,
+    ) -> Ticket:
+
+        ticket = await self.ticket_repository.get_by_id(ticket_id)
+
+        if ticket is None:
+            raise ValueError("Ticket not found")
+
+        if current_user.role not in (UserRole.AGENT, UserRole.ADMIN):
+            raise PermissionError("You cannot change ticket priority")
+
+        old_priority = ticket.priority
+
+        if new_priority == old_priority:
+            return ticket
+
+        is_raise = PRIORITY_RANK[new_priority] > PRIORITY_RANK[old_priority]
+
+        if current_user.role == UserRole.AGENT:
+            if ticket.assigned_agent_id is None:
+                if not is_raise:
+                    raise PermissionError(
+                        "Agents can only raise priority on unassigned tickets"
+                    )
+
+            elif ticket.assigned_agent_id != current_user.id:
+                if not is_raise:
+                    raise PermissionError(
+                        "Only the assigned agent can lower priority"
+                    )
+
+        now = datetime.now(timezone.utc)
+
+        history = TicketPriorityHistory(
+            ticket_id=ticket.id,
+            old_priority=old_priority,
+            new_priority=new_priority,
+            changed_by_user_id=current_user.id,
+            reason=reason,
+            changed_at=now,
+        )
+
+        ticket.priority = new_priority
+        ticket.updated_at = now
+
+        try:
+            self.db.add(history)
+
+            await self.db.commit()
+            await self.db.refresh(ticket)
+
+            return ticket
+
+        except Exception:
+            await self.db.rollback()
+            raise
