@@ -57,3 +57,21 @@ class S3Service:
             Bucket=self.bucket,
             Key=object_key,
         )
+
+    def generate_download_url(
+        self,
+        object_key: str,
+        filename: str,
+        expires_in: int = 300,
+    ) -> str:
+        return self.client.generate_presigned_url(
+            ClientMethod="get_object",
+            Params={
+                "Bucket": self.bucket,
+                "Key": object_key,
+                "ResponseContentDisposition": (
+                    f'attachment; filename="{filename}"'
+                ),
+            },
+            ExpiresIn=expires_in,
+        )

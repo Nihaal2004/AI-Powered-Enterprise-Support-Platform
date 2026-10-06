@@ -18,6 +18,7 @@ from app.schemas.attachment import (
     AttachmentUploadRequest,
     AttachmentUploadResponse,
     AttachmentResponse,
+    AttachmentDownloadResponse
 )
 
 from app.services.attachment_service import AttachmentService
@@ -453,6 +454,82 @@ async def confirm_attachment_upload(
             message_id=message_id,
             attachment_id=attachment_id,
             current_user=current_user,
+        )
+
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=404,
+            detail=str(exc),
+        ) from exc
+
+    except PermissionError as exc:
+        raise HTTPException(
+            status_code=403,
+            detail=str(exc),
+        ) from exc
+
+    except RuntimeError as exc:
+        raise HTTPException(
+            status_code=409,
+            detail=str(exc),
+        ) from exc
+
+
+@router.get(
+    "/{ticket_id}/messages/{message_id}/attachments",
+    response_model=list[AttachmentResponse],
+)
+async def list_attachments(
+    ticket_id: uuid.UUID,
+    message_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    service = AttachmentService(db)
+
+    try:
+        return await service.list_attachments(
+            ticket_id=ticket_id,
+            message_id=message_id,
+            current_user=current_user,
+        )
+
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=404,
+            detail=str(exc),
+        ) from exc
+
+    except PermissionError as exc:
+        raise HTTPException(
+            status_code=403,
+            detail=str(exc),
+        ) from exc
+
+@router.get(
+    "/{ticket_id}/messages/{message_id}/attachments/{attachment_id}/download",
+    response_model=AttachmentDownloadResponse,
+)
+async def download_attachment(
+    ticket_id: uuid.UUID,
+    message_id: uuid.UUID,
+    attachment_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    service = AttachmentService(db)
+
+    try:
+        url = await service.create_download_url(
+            ticket_id=ticket_id,
+            message_id=message_id,
+            attachment_id=attachment_id,
+            current_user=current_user,
+        )
+
+        return AttachmentDownloadResponse(
+            download_url=url,
+            expires_in=300,
         )
 
     except ValueError as exc:

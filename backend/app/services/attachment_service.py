@@ -9,7 +9,7 @@ from app.models.ticket_attachment import (
     TicketAttachment,
     UploadStatus,
 )
-from app.models.user import User
+from app.models.user import User, UserRole
 from app.repositories.attachment_repository import AttachmentRepository
 from app.repositories.ticket_repository import TicketRepository
 from app.services.s3_service import S3Service
@@ -178,3 +178,93 @@ class AttachmentService:
         except Exception:
             await self.db.rollback()
             raise
+
+    async def _verify_ticket_access(
+        self,
+        ticket_id: uuid.UUID,
+        current_user: User,
+    ):
+        ticket = await self.ticket_repository.get_by_id(ticket_id)
+
+        if ticket is None:
+            raise ValueError("Ticket not found")
+
+        if (
+            current_user.role == UserRole.CUSTOMER
+            and ticket.customer_id != current_user.id
+        ):
+            raise PermissionError(
+                "You cannot access this ticket"
+            )
+
+        return ticket
+
+    async def list_attachments(
+        self,
+        ticket_id: uuid.UUID,
+        message_id: uuid.UUID,
+        current_user: User,
+    ) -> list[TicketAttachment]:
+
+        await self._verify_ticket_access(
+            ticket_id,
+            current_user,
+        )
+
+        message = await self.ticket_repository.get_message_by_id(
+            message_id
+        )
+
+        if message is None or message.ticket_id != ticket_id:
+            raise ValueError("Message not found")
+
+        attachments = await self.attachment_repository.list_by_message(
+            message_id
+        )
+
+        return [
+            attachment
+            for attachment in attachments
+            if attachment.upload_status == UploadStatus.UPLOADED
+        ]
+
+    async def create_download_url(
+        self,
+        ticket_id: uuid.UUID,
+        message_id: uuid.UUID,
+        attachment_id: uuid.UUID,
+        current_user: User,
+    ) -> str:
+
+        await self._verify_ticket_access(
+            ticket_id,
+            current_user,
+        )
+
+        message = await self.ticket_repository.get_message_by_id(
+            message_id
+        )
+
+        if message is None or message.ticket_id != ticket_id:
+            raise ValueError("Message not found")
+
+        attachment = await self.attachment_repository.get_by_id(
+            attachment_id
+        )
+
+        if (
+            attachment is None
+            or attachment.message_id != message_id
+        ):
+            raise ValueError("Attachment not found")
+
+        if attachment.upload_status != UploadStatus.UPLOADED:
+            raise RuntimeError(
+                "Attachment is not available for download"
+            )
+
+        return self.s3.generate_download_url(
+            object_key=attachment.storage_key,
+            filename=attachment.original_filename,
+            expires_in=300,
+        )

@@ -29,3 +29,15 @@ class AttachmentRepository:
         )
 
         return result.scalar_one_or_none()
+
+    async def list_by_message(
+        self,
+        message_id: uuid.UUID,
+    ) -> list[TicketAttachment]:
+        result = await self.db.execute(
+            select(TicketAttachment)
+            .where(TicketAttachment.message_id == message_id)
+            .order_by(TicketAttachment.created_at.asc())
+        )
+
+        return list(result.scalars().all())

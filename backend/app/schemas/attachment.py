@@ -38,3 +38,7 @@ class AttachmentResponse(BaseModel):
     model_config = {
         "from_attributes": True
     }
+
+class AttachmentDownloadResponse(BaseModel):
+    download_url: str
+    expires_in: int = 300
