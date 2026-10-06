@@ -10,6 +10,10 @@ from app.models.user import User, UserRole
 from fastapi import HTTPException
 from app.schemas.message import MessageCreate, MessageResponse
 from app.schemas.ticket import TicketStatusUpdate, TicketPriorityUpdate
+from app.schemas.internal_note import (
+    InternalNoteCreate,
+    InternalNoteResponse,
+)
 router = APIRouter(
     prefix="/tickets",
     tags=["tickets"],
@@ -226,6 +230,68 @@ async def update_priority(
             ticket_id=ticket_id,
             new_priority=data.priority,
             reason=data.reason,
+            current_user=current_user,
+        )
+
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=404,
+            detail=str(exc),
+        ) from exc
+
+    except PermissionError as exc:
+        raise HTTPException(
+            status_code=403,
+            detail=str(exc),
+        ) from exc
+
+
+@router.get(
+    "/{ticket_id}/internal-notes",
+    response_model=list[InternalNoteResponse],
+)
+async def get_internal_notes(
+    ticket_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    service = TicketService(db)
+
+    try:
+        return await service.get_internal_notes(
+            ticket_id=ticket_id,
+            current_user=current_user,
+        )
+
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=404,
+            detail=str(exc),
+        ) from exc
+
+    except PermissionError as exc:
+        raise HTTPException(
+            status_code=403,
+            detail=str(exc),
+        ) from exc
+
+@router.post(
+    "/{ticket_id}/internal-notes",
+    response_model=InternalNoteResponse,
+    status_code=201,
+)
+async def add_internal_note(
+    ticket_id: uuid.UUID,
+    data: InternalNoteCreate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    service = TicketService(db)
+
+    try:
+        return await service.add_internal_note(
+            ticket_id=ticket_id,
+            body=data.body,
             current_user=current_user,
         )
 

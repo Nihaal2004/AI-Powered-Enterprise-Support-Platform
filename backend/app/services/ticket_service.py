@@ -15,6 +15,7 @@ from app.models.user import User, UserRole
 import uuid
 from app.models.user import User
 from app.models.ticket_priority_history import TicketPriorityHistory
+from app.models.internal_note import InternalNote
 
 VALID_STATUS_TRANSITIONS = {
     TicketStatus.OPEN: {
@@ -367,6 +368,72 @@ class TicketService:
             await self.db.refresh(ticket)
 
             return ticket
+
+        except Exception:
+            await self.db.rollback()
+            raise
+
+    async def get_internal_notes(
+        self,
+        ticket_id: uuid.UUID,
+        current_user: User,
+    ) -> list[InternalNote]:
+
+        if current_user.role not in (
+            UserRole.AGENT,
+            UserRole.ADMIN,
+        ):
+            raise PermissionError(
+                "Customers cannot access internal notes"
+            )
+
+        ticket = await self.ticket_repository.get_by_id(
+            ticket_id
+        )
+
+        if ticket is None:
+            raise ValueError("Ticket not found")
+
+        return await self.ticket_repository.get_internal_notes(
+            ticket_id
+        )
+
+    async def add_internal_note(
+        self,
+        ticket_id: uuid.UUID,
+        body: str,
+        current_user: User,
+    ) -> InternalNote:
+
+        if current_user.role not in (
+            UserRole.AGENT,
+            UserRole.ADMIN,
+        ):
+            raise PermissionError(
+                "Customers cannot add internal notes"
+            )
+
+        ticket = await self.ticket_repository.get_by_id(
+            ticket_id
+        )
+
+        if ticket is None:
+            raise ValueError("Ticket not found")
+
+        note = InternalNote(
+            ticket_id=ticket.id,
+            author_user_id=current_user.id,
+            body=body,
+            created_at=datetime.now(timezone.utc),
+        )
+
+        try:
+            self.db.add(note)
+
+            await self.db.commit()
+            await self.db.refresh(note)
+
+            return note
 
         except Exception:
             await self.db.rollback()
