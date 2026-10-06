@@ -83,3 +83,12 @@ class TicketRepository:
         )
 
         return list(result.scalars().all())
+
+    async def get_message_by_id(
+        self,
+        message_id: uuid.UUID,
+    ) -> TicketMessage | None:
+        result = await self.db.execute(
+            select(TicketMessage).where(TicketMessage.id == message_id)
+        )
+        return result.scalar_one_or_none()

@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -16,6 +16,7 @@ import uuid
 from app.models.user import User
 from app.models.ticket_priority_history import TicketPriorityHistory
 from app.models.internal_note import InternalNote
+from app.models.message_revision import MessageRevision, RevisionType
 
 VALID_STATUS_TRANSITIONS = {
     TicketStatus.OPEN: {
@@ -118,7 +119,13 @@ class TicketService:
         else:
             raise PermissionError("You cannot access this ticket")
 
-        return await self.ticket_repository.get_messages(ticket_id)
+        messages = await self.ticket_repository.get_messages(ticket_id)
+
+        for message in messages:
+            if message.deleted_at is not None:
+                message.body = "This message was deleted"
+
+        return messages
 
     
     async def add_message(
@@ -434,6 +441,130 @@ class TicketService:
             await self.db.refresh(note)
 
             return note
+
+        except Exception:
+            await self.db.rollback()
+            raise
+
+    async def edit_message(
+        self,
+        ticket_id: uuid.UUID,
+        message_id: uuid.UUID,
+        body: str,
+        current_user: User,
+    ) -> TicketMessage:
+
+        ticket = await self.ticket_repository.get_by_id(ticket_id)
+
+        if ticket is None:
+            raise ValueError("Ticket not found")
+
+        message = await self.ticket_repository.get_message_by_id(message_id)
+
+        if message is None or message.ticket_id != ticket_id:
+            raise ValueError("Message not found")
+
+        if message.author_user_id != current_user.id:
+            raise PermissionError(
+                "You can only edit your own messages"
+            )
+
+        if message.deleted_at is not None:
+            raise RuntimeError(
+                "Deleted messages cannot be edited"
+            )
+
+        now = datetime.now(timezone.utc)
+
+        if now > message.created_at + timedelta(minutes=15):
+            raise RuntimeError(
+                "Message can only be edited within 15 minutes"
+            )
+
+        revision = MessageRevision(
+            message_id=message.id,
+            previous_body=message.body,
+            changed_by_user_id=current_user.id,
+            change_type=RevisionType.EDIT,
+            changed_at=now,
+        )
+
+        message.body = body
+        message.edited_at = now
+
+        ticket.conversation_version += 1
+        ticket.conversation_updated_at = now
+        ticket.updated_at = now
+
+        try:
+            self.db.add(revision)
+
+            await self.db.commit()
+            await self.db.refresh(message)
+
+            return message
+
+        except Exception:
+            await self.db.rollback()
+            raise
+
+
+    async def delete_message(
+        self,
+        ticket_id: uuid.UUID,
+        message_id: uuid.UUID,
+        current_user: User,
+    ) -> TicketMessage:
+
+        ticket = await self.ticket_repository.get_by_id(ticket_id)
+
+        if ticket is None:
+            raise ValueError("Ticket not found")
+
+        message = await self.ticket_repository.get_message_by_id(message_id)
+
+        if message is None or message.ticket_id != ticket_id:
+            raise ValueError("Message not found")
+
+        if message.author_user_id != current_user.id:
+            raise PermissionError(
+                "You can only delete your own messages"
+            )
+
+        if message.deleted_at is not None:
+            raise RuntimeError(
+                "Message is already deleted"
+            )
+
+        now = datetime.now(timezone.utc)
+
+        if now > message.created_at + timedelta(minutes=15):
+            raise RuntimeError(
+                "Message can only be deleted within 15 minutes"
+            )
+
+        revision = MessageRevision(
+            message_id=message.id,
+            previous_body=message.body,
+            changed_by_user_id=current_user.id,
+            change_type=RevisionType.SOFT_DELETE,
+            changed_at=now,
+        )
+
+        message.deleted_at = now
+
+        ticket.conversation_version += 1
+        ticket.conversation_updated_at = now
+        ticket.updated_at = now
+
+        try:
+            self.db.add(revision)
+
+            await self.db.commit()
+            await self.db.refresh(message)
+
+            message.body = "This message was deleted"
+            return message
 
         except Exception:
             await self.db.rollback()

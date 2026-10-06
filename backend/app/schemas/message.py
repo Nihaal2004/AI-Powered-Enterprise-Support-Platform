@@ -23,3 +23,6 @@ class MessageResponse(BaseModel):
     model_config = {
         "from_attributes": True
     }
+
+class MessageUpdate(BaseModel):
+    body: str = Field(min_length=1, max_length=10000)

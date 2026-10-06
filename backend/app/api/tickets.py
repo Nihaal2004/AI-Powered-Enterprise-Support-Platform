@@ -8,7 +8,7 @@ import uuid
 from app.api.dependencies import get_current_user
 from app.models.user import User, UserRole
 from fastapi import HTTPException
-from app.schemas.message import MessageCreate, MessageResponse
+from app.schemas.message import MessageCreate, MessageResponse, MessageUpdate
 from app.schemas.ticket import TicketStatusUpdate, TicketPriorityUpdate
 from app.schemas.internal_note import (
     InternalNoteCreate,
@@ -304,5 +304,82 @@ async def add_internal_note(
     except PermissionError as exc:
         raise HTTPException(
             status_code=403,
+            detail=str(exc),
+        ) from exc
+
+@router.patch(
+    "/{ticket_id}/messages/{message_id}",
+    response_model=MessageResponse,
+)
+async def edit_message(
+    ticket_id: uuid.UUID,
+    message_id: uuid.UUID,
+    data: MessageUpdate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    service = TicketService(db)
+
+    try:
+        return await service.edit_message(
+            ticket_id=ticket_id,
+            message_id=message_id,
+            body=data.body,
+            current_user=current_user,
+        )
+
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=404,
+            detail=str(exc),
+        ) from exc
+
+    except PermissionError as exc:
+        raise HTTPException(
+            status_code=403,
+            detail=str(exc),
+        ) from exc
+
+    except RuntimeError as exc:
+        raise HTTPException(
+            status_code=409,
+            detail=str(exc),
+        ) from exc
+
+
+@router.delete(
+    "/{ticket_id}/messages/{message_id}",
+    response_model=MessageResponse,
+)
+async def delete_message(
+    ticket_id: uuid.UUID,
+    message_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    service = TicketService(db)
+
+    try:
+        return await service.delete_message(
+            ticket_id=ticket_id,
+            message_id=message_id,
+            current_user=current_user,
+        )
+
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=404,
+            detail=str(exc),
+        ) from exc
+
+    except PermissionError as exc:
+        raise HTTPException(
+            status_code=403,
+            detail=str(exc),
+        ) from exc
+
+    except RuntimeError as exc:
+        raise HTTPException(
+            status_code=409,
             detail=str(exc),
         ) from exc
