@@ -14,6 +14,13 @@ from app.schemas.internal_note import (
     InternalNoteCreate,
     InternalNoteResponse,
 )
+from app.schemas.attachment import (
+    AttachmentUploadRequest,
+    AttachmentUploadResponse,
+    AttachmentResponse,
+)
+
+from app.services.attachment_service import AttachmentService
 router = APIRouter(
     prefix="/tickets",
     tags=["tickets"],
@@ -363,6 +370,88 @@ async def delete_message(
         return await service.delete_message(
             ticket_id=ticket_id,
             message_id=message_id,
+            current_user=current_user,
+        )
+
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=404,
+            detail=str(exc),
+        ) from exc
+
+    except PermissionError as exc:
+        raise HTTPException(
+            status_code=403,
+            detail=str(exc),
+        ) from exc
+
+    except RuntimeError as exc:
+        raise HTTPException(
+            status_code=409,
+            detail=str(exc),
+        ) from exc
+
+@router.post(
+    "/{ticket_id}/messages/{message_id}/attachments/presign",
+    response_model=AttachmentUploadResponse,
+    status_code=201,
+)
+async def create_attachment_upload(
+    ticket_id: uuid.UUID,
+    message_id: uuid.UUID,
+    data: AttachmentUploadRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    service = AttachmentService(db)
+
+    try:
+        attachment, upload_url = await service.create_upload(
+            ticket_id=ticket_id,
+            message_id=message_id,
+            filename=data.filename,
+            mime_type=data.mime_type,
+            size_bytes=data.size_bytes,
+            current_user=current_user,
+        )
+
+        return AttachmentUploadResponse(
+            attachment_id=attachment.id,
+            upload_url=upload_url,
+            storage_key=attachment.storage_key,
+            expires_in=300,
+        )
+
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=404,
+            detail=str(exc),
+        ) from exc
+
+    except PermissionError as exc:
+        raise HTTPException(
+            status_code=403,
+            detail=str(exc),
+        ) from exc
+
+@router.post(
+    "/{ticket_id}/messages/{message_id}/attachments/{attachment_id}/confirm",
+    response_model=AttachmentResponse,
+)
+async def confirm_attachment_upload(
+    ticket_id: uuid.UUID,
+    message_id: uuid.UUID,
+    attachment_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    service = AttachmentService(db)
+
+    try:
+        return await service.confirm_upload(
+            ticket_id=ticket_id,
+            message_id=message_id,
+            attachment_id=attachment_id,
             current_user=current_user,
         )
 

@@ -1,1 +1,4 @@
 random.md
+.env
+.env.*
+!.env.example
