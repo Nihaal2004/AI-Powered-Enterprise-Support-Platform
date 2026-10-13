@@ -13,7 +13,8 @@ from app.models.ticket_category import TicketCategory
 from app.models.ticket_message import TicketMessage
 from app.models.ticket_priority_history import TicketPriorityHistory
 from app.models.ticket_tag import TicketTag
-
+from app.models.outbox_event import OutboxEvent
+from app.models.knowledge_document import KnowledgeDocument
 __all__ = [
     "User",
     "Customer",
@@ -30,4 +31,6 @@ __all__ = [
     "TicketPriorityHistory",
     "TicketTag",
     "Ticket",
+    "OutboxEvent",
+    "KnowledgeDocument"
 ]

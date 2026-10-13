@@ -3,34 +3,25 @@ import uuid
 
 from app.core.security import hash_password
 from app.db.session import AsyncSessionLocal
-from app.models.agent import Agent
 from app.models.user import User, UserRole
 
 
 async def seed():
     async with AsyncSessionLocal() as db:
-        agent_user = User(
+        admin_user = User(
             id=uuid.uuid4(),
-            email="agent@example.com",
-            name="Test Agent",
-            password_hash=hash_password("AgentPass123"),
-            role=UserRole.AGENT,
+            email="admin@example.com",
+            name="Test Admin",
+            password_hash=hash_password("AdminPass123"),
+            role=UserRole.ADMIN,
             is_active=True,
         )
 
         try:
-            db.add(agent_user)
-            await db.flush()
-
-            agent = Agent(
-                user_id=agent_user.id,
-            )
-
-            db.add(agent)
-
+            db.add(admin_user)
             await db.commit()
 
-            print("Agent ID:", agent_user.id)
+            print("Admin ID:", admin_user.id)
 
         except Exception:
             await db.rollback()
