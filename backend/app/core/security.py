@@ -5,6 +5,8 @@ import hashlib
 import secrets
 from jose import JWTError, jwt
 from passlib.context import CryptContext
+from passlib.exc import UnknownHashError
+
 
 
 pwd_context = CryptContext(
@@ -29,12 +31,15 @@ def hash_refresh_token(token: str) -> str:
 
 def verify_password(
     plain_password: str,
-    password_hash: str,
+    hashed_password: str,
 ) -> bool:
-    return pwd_context.verify(
-        plain_password,
-        password_hash,
-    )
+    try:
+        return pwd_context.verify(
+            plain_password,
+            hashed_password,
+        )
+    except (ValueError, UnknownHashError):
+        return False
 
 
 def create_access_token(

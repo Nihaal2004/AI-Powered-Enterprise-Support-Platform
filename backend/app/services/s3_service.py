@@ -75,3 +75,20 @@ class S3Service:
             },
             ExpiresIn=expires_in,
         )
+
+    
+    async def download_object(
+        self,
+        object_key: str,
+    ) -> bytes:
+        response = await asyncio.to_thread(
+            self.client.get_object,
+            Bucket=self.bucket,
+            Key=object_key,
+        )
+
+        body = response["Body"]
+
+        return await asyncio.to_thread(
+            body.read
+        )

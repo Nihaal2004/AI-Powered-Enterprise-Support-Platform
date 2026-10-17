@@ -15,6 +15,7 @@ from app.models.ticket_priority_history import TicketPriorityHistory
 from app.models.ticket_tag import TicketTag
 from app.models.outbox_event import OutboxEvent
 from app.models.knowledge_document import KnowledgeDocument
+from app.models.knowledge_chunk import KnowledgeChunk
 __all__ = [
     "User",
     "Customer",
@@ -32,5 +33,6 @@ __all__ = [
     "TicketTag",
     "Ticket",
     "OutboxEvent",
-    "KnowledgeDocument"
+    "KnowledgeDocument",
+    "KnowledgeChunk"
 ]

@@ -1,0 +1,68 @@
+Enterprise Support Platform – Account Access and Login Troubleshooting
+
+Customers may occasionally report that they are unable to log in to their account. Common causes include an incorrect password, a locked account, an expired password, browser cache issues, or temporary authentication service problems.
+
+Password Reset
+
+If a customer cannot remember their password, they should use the “Forgot Password” option on the login page. A password reset link will be sent to the email address associated with the account.
+
+The reset link is valid for 30 minutes. If the link has expired, the customer must request a new password reset email.
+
+Customers should create a password with at least 8 characters and should avoid reusing a recently used password.
+
+Account Lockout
+
+An account may be temporarily locked after five consecutive failed login attempts. A locked account is automatically unlocked after 15 minutes.
+
+Support agents should not manually reset passwords on behalf of customers. Instead, the customer should be directed through the official password reset process.
+
+If the customer still cannot log in after the lockout period, the agent should verify that the customer is using the correct email address and should check whether the account is active.
+
+Browser and Session Issues
+
+Customers experiencing repeated login failures should try the following steps:
+
+1. Refresh the login page.
+2. Clear browser cache and cookies.
+3. Try an incognito or private browsing window.
+4. Try a different supported browser.
+5. Disable browser extensions that may interfere with authentication.
+6. Confirm that JavaScript and cookies are enabled.
+
+If the login works in an incognito window but not in the normal browser session, cached authentication data is likely causing the issue.
+
+Email Verification
+
+Newly registered customers must verify their email address before full account access is enabled.
+
+If the verification email was not received, the customer should check the spam or junk folder before requesting another verification email.
+
+Verification emails may take several minutes to arrive. Multiple verification requests should be avoided because older links may become invalid after a newer link is generated.
+
+Authentication Service Outage
+
+If multiple customers report login failures at the same time, support agents should check the internal service status dashboard before troubleshooting individual accounts.
+
+During a confirmed authentication outage, agents should inform customers that the issue is being investigated and avoid repeatedly asking customers to reset their passwords.
+
+Support agents should update affected tickets when service is restored.
+
+Escalation
+
+The ticket should be escalated to the authentication engineering team when:
+
+- the account remains inaccessible after password reset,
+- the account is shown as active but authentication continues to fail,
+- login failures affect multiple customers,
+- the authentication service returns repeated server errors,
+- or the issue appears related to account data corruption.
+
+When escalating, include the customer account identifier, approximate time of the failed login, browser or device information if available, troubleshooting steps already attempted, and any relevant error messages.
+
+Security
+
+Support agents must never request a customer’s password.
+
+Passwords, reset tokens, authentication cookies, access tokens, and other credentials must never be copied into ticket messages or internal notes.
+
+If a customer accidentally sends sensitive authentication information, the agent should follow the company’s security handling procedure and escalate the incident if necessary.

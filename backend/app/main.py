@@ -8,6 +8,9 @@ from app.db.session import get_db
 from app.api.auth import router as auth_router
 from app.api.tickets import router as tickets_router
 from app.api.knowledge import router as knowledge_router
+from app.api.knowledge_search import router as knowledge_search_router
+
+
 
 app = FastAPI()
 
@@ -22,6 +25,7 @@ app.add_middleware(
 app.include_router(tickets_router)
 app.include_router(auth_router)
 app.include_router(knowledge_router)
+app.include_router(knowledge_search_router)
 
 @app.get("/health")
 async def health(db: AsyncSession = Depends(get_db)):
