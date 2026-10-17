@@ -16,6 +16,7 @@ from app.models.ticket_tag import TicketTag
 from app.models.outbox_event import OutboxEvent
 from app.models.knowledge_document import KnowledgeDocument
 from app.models.knowledge_chunk import KnowledgeChunk
+from app.models.ai_suggestion import AISuggestion
 __all__ = [
     "User",
     "Customer",
@@ -34,5 +35,6 @@ __all__ = [
     "Ticket",
     "OutboxEvent",
     "KnowledgeDocument",
-    "KnowledgeChunk"
+    "KnowledgeChunk",
+    "AISuggestion"
 ]

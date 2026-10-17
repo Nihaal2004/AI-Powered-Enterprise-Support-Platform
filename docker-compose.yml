@@ -100,6 +100,19 @@ services:
         condition: service_healthy
     networks:
       - app_network
+  ai-worker:
+    build:
+      context: ./backend
+    command: python -u -m app.workers.ai_worker
+    env_file:
+      - .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - app_network
 networks:
   app_network:
     driver: bridge

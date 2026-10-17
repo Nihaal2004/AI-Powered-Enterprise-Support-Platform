@@ -9,6 +9,8 @@ from app.api.auth import router as auth_router
 from app.api.tickets import router as tickets_router
 from app.api.knowledge import router as knowledge_router
 from app.api.knowledge_search import router as knowledge_search_router
+from app.api.ai_suggestions import router as ai_suggestions_router
+
 
 
 
@@ -26,6 +28,7 @@ app.include_router(tickets_router)
 app.include_router(auth_router)
 app.include_router(knowledge_router)
 app.include_router(knowledge_search_router)
+app.include_router(ai_suggestions_router)
 
 @app.get("/health")
 async def health(db: AsyncSession = Depends(get_db)):

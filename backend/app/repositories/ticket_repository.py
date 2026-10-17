@@ -92,3 +92,15 @@ class TicketRepository:
             select(TicketMessage).where(TicketMessage.id == message_id)
         )
         return result.scalar_one_or_none()
+
+    async def get_conversation_version(
+        self,
+        ticket_id: uuid.UUID,
+    ) -> int | None:
+        result = await self.db.execute(
+            select(Ticket.conversation_version).where(
+                Ticket.id == ticket_id
+            )
+        )
+
+        return result.scalar_one_or_none()
