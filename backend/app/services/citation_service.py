@@ -49,11 +49,12 @@ class CitationService:
 
         return [
             {
-                "citation": number,
-                "chunk_id": knowledge_chunks[number - 1]["chunk_id"],
-                "document_id": knowledge_chunks[number - 1]["document_id"],
-                "chunk_index": knowledge_chunks[number - 1]["chunk_index"],
-                "similarity": knowledge_chunks[number - 1]["similarity"],
-            }
+    "citation": number,
+    "chunk_id": knowledge_chunks[number - 1]["chunk_id"],
+    "document_id": knowledge_chunks[number - 1]["document_id"],
+    "chunk_index": knowledge_chunks[number - 1]["chunk_index"],
+    "page_number": knowledge_chunks[number - 1]["page_number"],
+    "similarity": knowledge_chunks[number - 1]["similarity"],
+}
             for number in sorted(referenced_numbers)
         ]

@@ -2,7 +2,13 @@ import uuid
 from datetime import datetime
 
 from pgvector.sqlalchemy import Vector
-from sqlalchemy import DateTime, ForeignKey, Integer, Text
+from sqlalchemy import (
+    DateTime,
+    ForeignKey,
+    Integer,
+    Text,
+    UniqueConstraint,
+)
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -11,6 +17,14 @@ from app.db.base import Base
 
 class KnowledgeChunk(Base):
     __tablename__ = "knowledge_chunks"
+
+    __table_args__ = (
+        UniqueConstraint(
+            "document_id",
+            "chunk_index",
+            name="uq_knowledge_chunks_document_chunk_index",
+        ),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
@@ -31,6 +45,13 @@ class KnowledgeChunk(Base):
     chunk_index: Mapped[int] = mapped_column(
         Integer,
         nullable=False,
+    )
+
+    # NULL for plain-text documents.
+    # PDFs use human-readable page numbers: 1, 2, 3...
+    page_number: Mapped[int | None] = mapped_column(
+        Integer,
+        nullable=True,
     )
 
     content: Mapped[str] = mapped_column(

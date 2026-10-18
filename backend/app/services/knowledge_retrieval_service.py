@@ -32,13 +32,14 @@ class KnowledgeRetrievalService:
         )
 
         return [
-            {
-                "chunk_id": str(chunk.id),
-                "document_id": str(chunk.document_id),
-                "chunk_index": chunk.chunk_index,
-                "content": chunk.content,
-                "distance": float(distance),
-                "similarity": 1.0 - float(distance),
-            }
-            for chunk, distance in results
-        ]
+                {
+                    "chunk_id": str(chunk.id),
+                    "document_id": str(chunk.document_id),
+                    "chunk_index": chunk.chunk_index,
+                    "page_number": chunk.page_number,
+                    "content": chunk.content,
+                    "distance": float(distance),
+                    "similarity": 1.0 - float(distance),
+                }
+                for chunk, distance in results
+            ]

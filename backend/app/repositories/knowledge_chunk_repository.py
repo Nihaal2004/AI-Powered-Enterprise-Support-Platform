@@ -1,7 +1,8 @@
-from sqlalchemy import select
+from sqlalchemy import select, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.knowledge_chunk import KnowledgeChunk
+
 
 
 class KnowledgeChunkRepository:
@@ -38,3 +39,12 @@ class KnowledgeChunkRepository:
         result = await self.db.execute(stmt)
 
         return result.all()
+    async def delete_by_document_id(
+        self,
+        document_id,
+    ) -> None:
+        await self.db.execute(
+            delete(KnowledgeChunk).where(
+                KnowledgeChunk.document_id == document_id
+            )
+        )

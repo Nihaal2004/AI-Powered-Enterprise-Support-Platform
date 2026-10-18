@@ -23,10 +23,14 @@ from app.repositories.knowledge_document_repository import (
 from app.services.embedding_service import EmbeddingService
 from app.services.s3_service import S3Service
 from app.services.text_chunking_service import TextChunkingService
+from app.services.document_extraction_service import (
+    DocumentExtractionService,
+)
 
 s3_service = S3Service()
 chunking_service = TextChunkingService()
 embedding_service = EmbeddingService()
+extraction_service = DocumentExtractionService()
 
 async def process_message(message):
     async with message.process():
@@ -66,19 +70,38 @@ async def process_message(message):
                     document.storage_key
                 )
 
-                if document.mime_type == "text/plain":
-                    text = raw_bytes.decode("utf-8")
-                else:
-                    raise ValueError(
-                        f"Unsupported MIME type: {document.mime_type}"
-                    )
+                extracted_sections = extraction_service.extract(
+                    raw_bytes=raw_bytes,
+                    mime_type=document.mime_type,
+                )
 
-                texts = chunking_service.chunk_text(text)
-
-                if not texts:
+                if not extracted_sections:
                     raise ValueError(
                         "Document contains no extractable text"
                     )
+
+                chunk_payloads: list[dict] = []
+
+                for page_number, text in extracted_sections:
+                    page_chunks = chunking_service.chunk_text(text)
+
+                    for chunk_text in page_chunks:
+                        chunk_payloads.append(
+                            {
+                                "page_number": page_number,
+                                "content": chunk_text,
+                            }
+                        )
+
+                if not chunk_payloads:
+                    raise ValueError(
+                        "Document contains no extractable chunks"
+                    )
+
+                texts = [
+                    item["content"]
+                    for item in chunk_payloads
+                ]
 
                 embeddings = embedding_service.embed_documents(
                     texts
@@ -90,14 +113,17 @@ async def process_message(message):
                     KnowledgeChunk(
                         document_id=document.id,
                         chunk_index=index,
-                        content=text,
+                        page_number=payload["page_number"],
+                        content=payload["content"],
                         embedding=embedding,
                         created_at=now,
                     )
-                    for index, (text, embedding)
-                    in enumerate(zip(texts, embeddings))
+                    for index, (payload, embedding)
+                    in enumerate(
+                        zip(chunk_payloads, embeddings)
+                    )
                 ]
-
+                await chunk_repository.delete_by_document_id(document.id)
                 await chunk_repository.add_all(chunks)
 
                 document.status = KnowledgeDocumentStatus.INDEXED
@@ -143,7 +169,7 @@ async def main():
 
     # Don't give this worker unlimited jobs at once.
     await channel.set_qos(
-        prefetch_count=5
+        prefetch_count=1
     )
 
     await setup_messaging(channel)
