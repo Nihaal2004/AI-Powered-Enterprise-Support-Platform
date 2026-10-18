@@ -17,6 +17,7 @@ from app.models.outbox_event import OutboxEvent
 from app.models.knowledge_document import KnowledgeDocument
 from app.models.knowledge_chunk import KnowledgeChunk
 from app.models.ai_suggestion import AISuggestion
+from app.models.ai_suggestion_feedback import AISuggestionFeedback
 __all__ = [
     "User",
     "Customer",
@@ -36,5 +37,6 @@ __all__ = [
     "OutboxEvent",
     "KnowledgeDocument",
     "KnowledgeChunk",
-    "AISuggestion"
+    "AISuggestion",
+    "AISuggestionFeedback"
 ]
