@@ -13,6 +13,7 @@ from app.services.knowledge_retrieval_service import (
     KnowledgeRetrievalService,
 )
 from app.services.llm_service import LLMService
+from app.services.citation_service import CitationService
 
 
 MIN_SIMILARITY = 0.45
@@ -116,8 +117,8 @@ class AISuggestionProcessor:
 
             retrieval_results = await self.retrieval_service.retrieve(
                 query=retrieval_query,
-                top_k=4,
-)
+                top_k=8,
+            )
 
             for chunk in retrieval_results:
                 print(
@@ -126,7 +127,7 @@ class AISuggestionProcessor:
                     "similarity=",
                     round(chunk["similarity"], 3),
                 )
-            # End read transaction before waiting on external LLM.
+
             await self.db.commit()
 
             relevant_chunks = [
@@ -134,6 +135,8 @@ class AISuggestionProcessor:
                 for chunk in retrieval_results
                 if chunk["similarity"] >= MIN_SIMILARITY
             ]
+
+            relevant_chunks = relevant_chunks[:5]
 
             if not relevant_chunks:
                 suggestion = (
@@ -195,19 +198,10 @@ class AISuggestionProcessor:
             else:
                 suggestion.draft_text = draft
 
-                suggestion.citations = [
-                    {
-                        "citation": index,
-                        "chunk_id": chunk["chunk_id"],
-                        "document_id": chunk["document_id"],
-                        "chunk_index": chunk["chunk_index"],
-                        "similarity": chunk["similarity"],
-                    }
-                    for index, chunk in enumerate(
-                        relevant_chunks,
-                        start=1,
-                    )
-                ]
+                suggestion.citations = CitationService.build_citations(
+                    draft_text=draft,
+                    knowledge_chunks=relevant_chunks,
+                )
 
             suggestion.status = AISuggestionStatus.COMPLETED
             suggestion.completed_at = datetime.now(
