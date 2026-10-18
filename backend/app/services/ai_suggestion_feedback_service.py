@@ -17,6 +17,8 @@ from app.repositories.ai_suggestion_repository import (
     AISuggestionRepository,
 )
 from app.repositories.ticket_repository import TicketRepository
+from app.services.ticket_service import TicketService
+from app.services.citation_service import CitationService
 
 
 class AISuggestionFeedbackService:
@@ -28,6 +30,7 @@ class AISuggestionFeedbackService:
         )
         self.suggestion_repository = AISuggestionRepository(db)
         self.ticket_repository = TicketRepository(db)
+        self.ticket_service = TicketService(db)
 
     async def submit_feedback(
         self,
@@ -93,6 +96,15 @@ class AISuggestionFeedbackService:
             )
 
         if feedback_type == AISuggestionFeedbackType.ACCEPTED:
+            if final_text is not None:
+                raise HTTPException(
+                    status_code=422,
+                    detail=(
+                        "ACCEPTED must not include final_text. "
+                        "Use EDITED to modify the AI suggestion."
+                    ),
+                )
+
             final_text = suggestion.draft_text
 
         elif feedback_type == AISuggestionFeedbackType.EDITED:
@@ -115,9 +127,31 @@ class AISuggestionFeedbackService:
             created_at=datetime.now(timezone.utc),
         )
 
-        await self.feedback_repository.create(feedback)
+        try:
+            # ACCEPTED / EDITED becomes an actual customer-visible
+            # agent reply.
+            
+            if feedback_type in {
+                AISuggestionFeedbackType.ACCEPTED,
+                AISuggestionFeedbackType.EDITED,
+            }:
+                final_text = CitationService.strip_citations(final_text)
+                await self.ticket_service._add_message_no_commit(
+                    ticket_id=suggestion.ticket_id,
+                    body=final_text,
+                    current_user=current_user,
+                )
 
-        await self.db.commit()
-        await self.db.refresh(feedback)
+            # REJECTED creates no ticket message.
+            await self.feedback_repository.create(feedback)
 
-        return feedback
+            # Agent reply + conversation_version + feedback
+            # commit together.
+            await self.db.commit()
+            await self.db.refresh(feedback)
+
+            return feedback
+
+        except Exception:
+            await self.db.rollback()
+            raise

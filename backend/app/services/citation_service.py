@@ -5,6 +5,20 @@ class CitationService:
     CITATION_PATTERN = re.compile(r"\[(\d+)\]")
 
     @classmethod
+    def strip_citations(
+        cls,
+        text: str,
+    ) -> str:
+        cleaned = cls.CITATION_PATTERN.sub("", text)
+
+        # Clean spaces left before punctuation / doubled spaces.
+        cleaned = re.sub(r" +([.,;:!?])", r"\1", cleaned)
+        cleaned = re.sub(r"[ \t]{2,}", " ", cleaned)
+
+        return cleaned.strip()
+
+
+    @classmethod
     def build_citations(
         cls,
         draft_text: str,

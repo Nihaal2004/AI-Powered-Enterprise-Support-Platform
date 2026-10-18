@@ -127,8 +127,7 @@ class TicketService:
 
         return messages
 
-    
-    async def add_message(
+    async def _add_message_no_commit(
         self,
         ticket_id: uuid.UUID,
         body: str,
@@ -142,7 +141,9 @@ class TicketService:
 
         if current_user.role == UserRole.CUSTOMER:
             if ticket.customer_id != current_user.id:
-                raise PermissionError("You cannot access this ticket")
+                raise PermissionError(
+                    "You cannot access this ticket"
+                )
 
             message_type = MessageType.CUSTOMER_REPLY
 
@@ -158,7 +159,9 @@ class TicketService:
             message_type = MessageType.AGENT_REPLY
 
         else:
-            raise PermissionError("You cannot reply to this ticket")
+            raise PermissionError(
+                "You cannot reply to this ticket"
+            )
 
         now = datetime.now(timezone.utc)
 
@@ -170,13 +173,30 @@ class TicketService:
             created_at=now,
         )
 
-        try:
-            self.db.add(message)
+        self.db.add(message)
 
-            ticket.conversation_version += 1
-            ticket.conversation_updated_at = now
-            ticket.last_message_at = now
-            ticket.updated_at = now
+        ticket.conversation_version += 1
+        ticket.conversation_updated_at = now
+        ticket.last_message_at = now
+        ticket.updated_at = now
+
+        await self.db.flush()
+
+        return message
+    
+    async def add_message(
+        self,
+        ticket_id: uuid.UUID,
+        body: str,
+        current_user: User,
+    ) -> TicketMessage:
+
+        try:
+            message = await self._add_message_no_commit(
+                ticket_id=ticket_id,
+                body=body,
+                current_user=current_user,
+            )
 
             await self.db.commit()
             await self.db.refresh(message)
