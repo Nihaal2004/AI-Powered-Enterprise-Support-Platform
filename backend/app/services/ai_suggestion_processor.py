@@ -65,6 +65,7 @@ class AISuggestionProcessor:
         await self.db.commit()
 
         try:
+            #raise RuntimeError("TEST_RETRY_FAILURE")
             ticket = await self.ticket_repository.get_by_id(
                 suggestion.ticket_id
             )
@@ -213,20 +214,4 @@ class AISuggestionProcessor:
 
         except Exception as exc:
             await self.db.rollback()
-
-            suggestion = (
-                await self.suggestion_repository.get_by_id(
-                    suggestion_id
-                )
-            )
-
-            if suggestion is not None:
-                suggestion.status = AISuggestionStatus.FAILED
-                suggestion.failed_at = datetime.now(
-                    timezone.utc
-                )
-                suggestion.failure_reason = str(exc)[:2000]
-
-                await self.db.commit()
-
             raise

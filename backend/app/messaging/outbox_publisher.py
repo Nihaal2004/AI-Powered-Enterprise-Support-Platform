@@ -2,11 +2,15 @@ import asyncio
 import json
 
 from app.db.session import AsyncSessionLocal
-from app.messaging.rabbitmq import publish_event
+from app.messaging.rabbitmq import (
+    get_rabbitmq_connection,
+    setup_messaging,
+    publish_event_on_exchange,
+)
 from app.repositories.outbox_repository import OutboxRepository
 
 
-async def publish_pending_events():
+async def publish_pending_events(exchange):
     async with AsyncSessionLocal() as db:
         repository = OutboxRepository(db)
 
@@ -31,7 +35,8 @@ async def publish_pending_events():
                     }
                 ).encode("utf-8")
 
-                await publish_event(
+                await publish_event_on_exchange(
+                    exchange=exchange,
                     routing_key=event.event_type,
                     body=body,
                 )
@@ -51,17 +56,33 @@ async def publish_pending_events():
 
 
 async def run_forever():
-    while True:
-        try:
-            count = await publish_pending_events()
+    connection = await get_rabbitmq_connection()
 
-            if count:
-                print(f"Published {count} outbox event(s)")
+    try:
+        channel = await connection.channel()
 
-        except Exception as exc:
-            print(f"Outbox publisher error: {exc}")
+        exchange = await setup_messaging(channel)
 
-        await asyncio.sleep(2)
+        print("Outbox publisher connected to RabbitMQ")
+
+        while True:
+            try:
+                count = await publish_pending_events(exchange)
+
+                if count:
+                    print(
+                        f"Published {count} outbox event(s)"
+                    )
+
+            except Exception as exc:
+                print(
+                    f"Outbox publisher error: {exc}"
+                )
+
+            await asyncio.sleep(2)
+
+    finally:
+        await connection.close()
 
 
 if __name__ == "__main__":
