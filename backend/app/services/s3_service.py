@@ -2,16 +2,22 @@ import asyncio
 import os
 
 import boto3
+from botocore.config import Config
 from botocore.exceptions import ClientError
 
 
 class S3Service:
     def __init__(self):
         self.bucket = os.environ["S3_BUCKET_NAME"]
+        region = os.environ["AWS_REGION"]
 
         self.client = boto3.client(
             "s3",
-            region_name=os.environ["AWS_REGION"],
+            region_name=region,
+            # Browser PUT preflights must reach the bucket's region directly.
+            # The global S3 endpoint can redirect before returning CORS headers.
+            endpoint_url=f"https://s3.{region}.amazonaws.com",
+            config=Config(signature_version="s3v4", s3={"addressing_style": "virtual"}),
         )
 
     def generate_upload_url(

@@ -12,6 +12,7 @@ class InternalNoteResponse(BaseModel):
     id: uuid.UUID
     ticket_id: uuid.UUID
     author_user_id: uuid.UUID
+    author_email: str
     body: str
     created_at: datetime
 

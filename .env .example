@@ -1,0 +1,101 @@
+# ============================================
+# Enterprise Support Platform - Example Env
+# ============================================
+# Copy/configure these values in your private environment file.
+# NEVER place real credentials in this file.
+
+
+# -------------------------
+# PostgreSQL
+# -------------------------
+
+POSTGRES_DB=support
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=change-me
+
+DATABASE_URL=postgresql+asyncpg://postgres:change-me@postgres:5432/support
+
+
+# -------------------------
+# Authentication / JWT
+# -------------------------
+
+JWT_SECRET_KEY=replace-with-a-long-random-secret
+JWT_ALGORITHM=HS256
+
+ACCESS_TOKEN_EXPIRE_MINUTES=15
+
+# Refresh-session limits
+REFRESH_TOKEN_ABSOLUTE_HOURS=8
+REFRESH_TOKEN_IDLE_MINUTES=60
+
+
+# -------------------------
+# RabbitMQ
+# -------------------------
+
+RABBITMQ_USER=guest
+RABBITMQ_PASSWORD=guest
+RABBITMQ_HOST=rabbitmq
+RABBITMQ_PORT=5672
+
+RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672/
+
+
+# -------------------------
+# AWS / S3
+# -------------------------
+
+AWS_ACCESS_KEY_ID=replace-with-aws-access-key
+AWS_SECRET_ACCESS_KEY=replace-with-aws-secret-key
+
+AWS_REGION=ap-south-1
+
+S3_BUCKET_NAME=replace-with-your-private-bucket-name
+
+# Presigned URL expiry in seconds
+S3_PRESIGNED_URL_EXPIRE_SECONDS=300
+
+
+# -------------------------
+# Gemini / LLM
+# -------------------------
+
+GEMINI_API_KEY=replace-with-gemini-api-key
+
+LLM_MODEL=gemini-3.8-flash
+
+
+# -------------------------
+# Embeddings / RAG
+# -------------------------
+
+EMBEDDING_MODEL=BAAI/bge-small-en-v1.5
+EMBEDDING_DIMENSION=384
+
+KNOWLEDGE_RETRIEVAL_TOP_K=8
+KNOWLEDGE_MIN_SIMILARITY=0.45
+KNOWLEDGE_MAX_CONTEXT_CHUNKS=5
+
+
+# -------------------------
+# Knowledge-base chunking
+# -------------------------
+
+KB_CHUNK_SIZE=800
+KB_CHUNK_OVERLAP=120
+
+
+# -------------------------
+# Frontend / CORS
+# -------------------------
+
+FRONTEND_ORIGIN=http://localhost:5173
+
+
+# -------------------------
+# Application
+# -------------------------
+
+APP_ENV=development
+LOG_LEVEL=INFO

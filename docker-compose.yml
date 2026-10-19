@@ -105,7 +105,7 @@ services:
       context: ./backend
     command: python -u -m app.workers.ai_worker
     env_file:
-      - .env
+      - "D:/Projects/private/enterprise-support.env"
     depends_on:
       postgres:
         condition: service_healthy

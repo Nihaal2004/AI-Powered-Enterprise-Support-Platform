@@ -1,0 +1,47 @@
+/* A full task section, with comfortable reading width for drafts and sources. */
+.ai-panel { max-width: 1040px; }
+.ai-section-heading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; padding: 6px 0 24px; margin-bottom: 24px; border-bottom: 1px solid var(--border); }
+.ai-panel-heading { display: flex; align-items: center; gap: var(--space-2); margin-bottom: var(--space-2); }
+.ai-panel h2 { margin: 0; font-size: 20px; font-weight: 600; letter-spacing: -.4px; }
+.ai-monogram { display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; border: 1px solid var(--success-border); border-radius: var(--radius-sm); background: var(--surface-selected); color: var(--accent); font-size: 10px; font-weight: 700; letter-spacing: .4px; }
+.ai-intro, .ai-no-sources { font-size: var(--font-sm); line-height: 1.65; }
+.ai-intro { margin: 8px 0 0; font-size: 13px; }
+button.ai-generate { margin: 0; padding: 10px 16px; color: var(--on-accent); background: var(--accent); border-color: var(--accent); }
+button.ai-generate:hover:not(:disabled) { color: var(--on-accent); background: var(--accent-hover); border-color: var(--accent-hover); }
+.ai-status { display: flex; align-items: center; gap: var(--space-2); margin: 0; padding: var(--space-3); border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: var(--font-sm); }
+.ai-status::before { content: ''; width: 7px; height: 7px; flex: 0 0 auto; border-radius: 50%; background: currentColor; }
+.ai-status-pending { color: var(--text-secondary); background: var(--neutral-bg); }
+.ai-status-processing { color: var(--accent); background: var(--surface-selected); border-color: var(--success-border); }
+.ai-panel .error, .ai-panel .notice, .ai-panel .success { margin: var(--space-3) 0; font-size: var(--font-sm); }
+.ai-panel .ai-status-stale { color: var(--warning); background: var(--warning-bg); border-color: var(--warning-border); border-left: 3px solid var(--warning); }
+.ai-status-failed { border-left: 3px solid var(--danger); }
+.ai-draft-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-2); margin-bottom: var(--space-2); }
+.ai-draft-heading .eyebrow { margin: 1px 0 0; }
+.ai-ready { flex: 0 0 auto; color: var(--success); background: var(--success-bg); font-size: 10px; padding: 1px 6px; }
+.ai-suggestion .eyebrow { color: var(--text-secondary); font-size: 10px; letter-spacing: .5px; }
+.ai-draft { padding: 26px 28px; border: 1px solid var(--border); border-radius: 12px; color: var(--text); background: var(--surface); box-shadow: var(--shadow-sm); font-size: 14px; line-height: 1.9; white-space: pre-wrap; overflow-wrap: anywhere; }
+.ai-final-text { border-left: 3px solid var(--success); background: var(--surface); }
+.ai-feedback { display: flex; align-items: center; gap: var(--space-2); font-weight: 600; }
+.ai-feedback::before { content: ''; width: 6px; height: 6px; flex: 0 0 auto; border-radius: 50%; background: currentColor; }
+.ai-feedback-accepted { border-left: 3px solid var(--success); }
+.ai-feedback-edited { border-left: 3px solid var(--accent); }
+.ai-panel .ai-feedback-rejected { color: var(--danger); background: var(--danger-bg); border-color: var(--danger-border); }
+.ai-feedback-rejected ~ .ai-draft { color: var(--text-secondary); background: var(--surface-subtle); }
+.ai-sources { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr)); gap: 10px; margin-top: 24px; }
+.ai-sources > h3 { grid-column: 1 / -1; }
+.ai-sources h3 { color: var(--text-secondary); font-size: var(--font-xs); font-weight: 650; margin: 0 0 var(--space-2); }
+.citation-card { padding: 16px; border: 1px solid var(--border); border-radius: 9px; background: var(--surface); font-size: var(--font-xs); }
+.citation-card > strong { color: var(--text-secondary); font-size: var(--font-xs); font-weight: 650; }
+.citation-card .identifier { color: var(--text-muted); font-size: 10px; line-height: 1.6; margin: 5px 0 0; }
+.citation-meta { display: flex; flex-wrap: wrap; gap: 2px 10px; margin-top: var(--space-1); color: var(--text-muted); font-size: 10px; }
+.ai-actions { display: flex; flex-wrap: wrap; gap: 6px; padding-top: var(--space-3); margin-top: var(--space-3); border-top: 1px solid var(--border); }
+.ai-actions button { font-size: var(--font-sm); min-height: 34px; padding: 7px var(--space-4); }
+.ai-edit-form { margin-top: var(--space-4); padding-top: var(--space-4); border-top: 1px solid var(--border); }
+.ai-edit-form label { margin-bottom: var(--space-2); }
+.ai-edit-form textarea { font-size: 13px; line-height: 1.75; }
+.ai-edit-form small { display: block; font-size: var(--font-xs); margin-top: 6px; line-height: 1.6; }
+.ai-original-draft { padding-top: var(--space-3); margin-top: var(--space-3); border-top: 1px solid var(--border); }
+.ai-original-draft summary { color: var(--text-muted); font-size: var(--font-xs); cursor: pointer; }
+.ai-original-draft .ai-draft { margin-top: var(--space-2); color: var(--text-secondary); background: var(--surface-subtle); font-size: var(--font-sm); }
+.ai-citation-note { color: var(--text-muted); font-size: var(--font-xs); line-height: 1.6; margin: var(--space-2) 0 0; }
+@media (max-width: 640px) { .ai-draft { padding: 20px; } }

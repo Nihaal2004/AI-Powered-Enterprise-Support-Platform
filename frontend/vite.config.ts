@@ -9,6 +9,7 @@ export default defineConfig({
       '/api': {
         target: 'http://localhost:8000',
         changeOrigin: true,
+        cookiePathRewrite: { '/auth': '/api/auth' },
         rewrite: (path) => path.replace(/^\/api/, ''),
       },
     },

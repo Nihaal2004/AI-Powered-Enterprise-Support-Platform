@@ -13,6 +13,7 @@ from app.models.user import User, UserRole
 from app.repositories.attachment_repository import AttachmentRepository
 from app.repositories.ticket_repository import TicketRepository
 from app.services.s3_service import S3Service
+from app.services.ticket_service import require_active_ticket
 
 
 class AttachmentService:
@@ -35,6 +36,8 @@ class AttachmentService:
 
         if ticket is None:
             raise ValueError("Ticket not found")
+
+        require_active_ticket(ticket)
 
         message = await self.ticket_repository.get_message_by_id(
             message_id
@@ -103,6 +106,11 @@ class AttachmentService:
         attachment_id: uuid.UUID,
         current_user: User,
     ) -> TicketAttachment:
+
+        ticket = await self.ticket_repository.get_by_id(ticket_id)
+        if ticket is None:
+            raise ValueError("Ticket not found")
+        require_active_ticket(ticket)
 
         attachment = await self.attachment_repository.get_by_id(
             attachment_id

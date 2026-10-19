@@ -4,7 +4,9 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import update
 
-from app.models.ticket import Ticket
+
+from app.models.user import User
+from app.models.ticket import Ticket, TicketStatus
 from app.models.ticket_message import TicketMessage
 from app.models.internal_note import InternalNote
 class TicketRepository:
@@ -44,6 +46,7 @@ class TicketRepository:
             update(Ticket)
             .where(Ticket.id == ticket_id)
             .where(Ticket.assigned_agent_id.is_(None))
+            .where(Ticket.status.notin_([TicketStatus.RESOLVED, TicketStatus.CLOSED]))
             .values(assigned_agent_id=agent_id)
             .returning(Ticket)
         )
@@ -75,14 +78,29 @@ class TicketRepository:
     async def get_internal_notes(
         self,
         ticket_id: uuid.UUID,
-    ) -> list[InternalNote]:
+    ) -> list[dict]:
         result = await self.db.execute(
-            select(InternalNote)
-            .where(InternalNote.ticket_id == ticket_id)
-            .order_by(InternalNote.created_at.asc())
+            select(
+                InternalNote.id,
+                InternalNote.ticket_id,
+                InternalNote.author_user_id,
+                User.email.label("author_email"),
+                InternalNote.body,
+                InternalNote.created_at,
+            )
+            .join(
+                User,
+                User.id == InternalNote.author_user_id,
+            )
+            .where(
+                InternalNote.ticket_id == ticket_id
+            )
+            .order_by(
+                InternalNote.created_at.asc()
+            )
         )
 
-        return list(result.scalars().all())
+        return [dict(row) for row in result.mappings().all()]
 
     async def get_message_by_id(
         self,

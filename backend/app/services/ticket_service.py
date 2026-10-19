@@ -44,6 +44,13 @@ PRIORITY_RANK = {
     TicketPriority.CRITICAL: 4,
 }
 
+
+def require_active_ticket(ticket: Ticket) -> None:
+    if ticket.status in (TicketStatus.RESOLVED, TicketStatus.CLOSED):
+        raise PermissionError(
+            "Resolved or closed tickets are locked. Reopen a resolved ticket before making changes."
+        )
+
 class TicketService:
     def __init__(self, db: AsyncSession):
         self.db = db
@@ -138,6 +145,8 @@ class TicketService:
 
         if ticket is None:
             raise ValueError("Ticket not found")
+
+        require_active_ticket(ticket)
 
         if current_user.role == UserRole.CUSTOMER:
             if ticket.customer_id != current_user.id:
@@ -322,7 +331,7 @@ class TicketService:
         if new_status == TicketStatus.RESOLVED:
             ticket.resolved_at = now
 
-        elif old_status == TicketStatus.RESOLVED:
+        elif old_status == TicketStatus.RESOLVED and new_status != TicketStatus.CLOSED:
             ticket.resolved_at = None
 
         if new_status == TicketStatus.CLOSED:
@@ -350,6 +359,8 @@ class TicketService:
 
         if ticket is None:
             raise ValueError("Ticket not found")
+
+        require_active_ticket(ticket)
 
         if current_user.role not in (UserRole.AGENT, UserRole.ADMIN):
             raise PermissionError("You cannot change ticket priority")
@@ -430,7 +441,7 @@ class TicketService:
         ticket_id: uuid.UUID,
         body: str,
         current_user: User,
-    ) -> InternalNote:
+    )  -> dict:
 
         if current_user.role not in (
             UserRole.AGENT,
@@ -460,7 +471,14 @@ class TicketService:
             await self.db.commit()
             await self.db.refresh(note)
 
-            return note
+            return {
+                "id": note.id,
+                "ticket_id": note.ticket_id,
+                "author_user_id": note.author_user_id,
+                "author_email": current_user.email,
+                "body": note.body,
+                "created_at": note.created_at,
+            }
 
         except Exception:
             await self.db.rollback()
@@ -478,6 +496,8 @@ class TicketService:
 
         if ticket is None:
             raise ValueError("Ticket not found")
+
+        require_active_ticket(ticket)
 
         message = await self.ticket_repository.get_message_by_id(message_id)
 
@@ -540,6 +560,8 @@ class TicketService:
 
         if ticket is None:
             raise ValueError("Ticket not found")
+
+        require_active_ticket(ticket)
 
         message = await self.ticket_repository.get_message_by_id(message_id)
 
