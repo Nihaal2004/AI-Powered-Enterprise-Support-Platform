@@ -57,7 +57,10 @@ function installFixtures() {
     if (url.endsWith('/attachments')) {
       const message_id = url.split('/messages/')[1].split('/')[0]; return json(attachments.filter(file => file.message_id === message_id));
     }
-    if (url.endsWith('/messages')) return json(method === 'POST' ? reply(body.body) : messages, method === 'POST' ? 201 : 200);
+    if (url.endsWith('/messages')) {
+      const withAttachments = message => ({ ...message, attachments: attachments.filter(file => file.message_id === message.id) });
+      return json(method === 'POST' ? withAttachments(reply(body.body)) : messages.map(withAttachments), method === 'POST' ? 201 : 200);
+    }
     if (url === '/api/tickets/ticket-1') return json(ticket);
     return json({ detail: `Unexpected fixture route: ${method} ${url}` }, 404);
   };

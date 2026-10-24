@@ -128,10 +128,6 @@ class TicketService:
 
         messages = await self.ticket_repository.get_messages(ticket_id)
 
-        for message in messages:
-            if message.deleted_at is not None:
-                message.body = "This message was deleted"
-
         return messages
 
     async def _add_message_no_commit(
@@ -605,7 +601,6 @@ class TicketService:
             await self.db.commit()
             await self.db.refresh(message)
 
-            message.body = "This message was deleted"
             return message
 
         except Exception:

@@ -53,7 +53,7 @@ test('saved views tolerate corrupt storage and validate enum choices', () => {
 });
 
 test('resolved and closed tickets block replies, files, message edits, priority and claiming', () => {
-  const message = { id: 'm', ticket_id: ticket.id, author_user_id: 'agent', message_type: 'AGENT_REPLY', body: 'Already sent', created_at: new Date().toISOString() };
+  const message = { id: 'm', ticket_id: ticket.id, author_user_id: 'agent', message_type: 'AGENT_REPLY', body: 'Already sent', created_at: new Date().toISOString(), attachments: [] };
   for (const status of ['RESOLVED', 'CLOSED']) {
     const locked = { ...ticket, status };
     const conversation = render(Conversation, { api: {}, userId: 'agent', ticket: locked, messages: [message], canReply: true, onChanged() {}, onReply: async () => message });

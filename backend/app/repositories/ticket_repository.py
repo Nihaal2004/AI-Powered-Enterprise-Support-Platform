@@ -3,6 +3,7 @@ import uuid
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import update
+from sqlalchemy.orm import selectinload
 
 
 from app.models.user import User
@@ -31,8 +32,15 @@ class TicketRepository:
     ) -> list[TicketMessage]:
         result = await self.db.execute(
             select(TicketMessage)
-            .where(TicketMessage.ticket_id == ticket_id)
-            .order_by(TicketMessage.created_at.asc())
+            .options(
+                selectinload(TicketMessage.attachments)
+            )
+            .where(
+                TicketMessage.ticket_id == ticket_id
+            )
+            .order_by(
+                TicketMessage.created_at.asc()
+            )
         )
 
         return list(result.scalars().all())

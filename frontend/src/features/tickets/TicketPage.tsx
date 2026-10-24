@@ -60,7 +60,7 @@ export function TicketPage({ id, section, client, user, queue = 'assigned_to_me'
       <RetainedSection name="conversation" active={section === 'conversation'}>
         {messageError && <p role="alert" className="error">{messageError} <button onClick={refresh}>Retry conversation</button></p>}
         {!messagesLoaded && !messageError && <p role="status" className="section-loading">Loading conversation…</p>}
-        {messagesLoaded && <Conversation api={api} userId={user.id} revision={revision} onChanged={refresh} active={section === 'conversation'} queue={queue}
+        {messagesLoaded && <Conversation api={api} userId={user.id} onChanged={refresh} active={section === 'conversation'} queue={queue}
         ticket={ticket} messages={messages} canReply={ticket.assigned_agent_id === user.id} onReply={async body => {
           const message = await api.reply(id, body);
           setMessages(previous => [...previous, message]);

@@ -66,10 +66,10 @@ test('Unassigned context survives ticket selection and all section links', () =>
 
 test('conversation retains chronological history and exposes the existing Overview claim route', () => {
   const messages = [
-    { id: 'old', ticket_id: 't', author_user_id: 'customer', message_type: 'CUSTOMER_REPLY', body: 'Earlier question', created_at: '2026-10-18T11:00:00Z' },
-    { id: 'new', ticket_id: 't', author_user_id: 'agent', message_type: 'AGENT_REPLY', body: 'Latest answer', created_at: '2026-10-18T12:00:00Z' },
+    { id: 'old', ticket_id: 't', author_user_id: 'customer', message_type: 'CUSTOMER_REPLY', body: 'Earlier question', created_at: '2026-10-18T11:00:00Z', attachments: [] },
+    { id: 'new', ticket_id: 't', author_user_id: 'agent', message_type: 'AGENT_REPLY', body: 'Latest answer', created_at: '2026-10-18T12:00:00Z', attachments: [] },
   ];
-  const markup = render(Conversation, { api: {}, userId: 'agent', revision: 0, onChanged() {}, ticket: { ...ticket, assigned_agent_id: null }, messages, canReply: false, onReply: async () => messages[1], queue: 'unassigned' });
+  const markup = render(Conversation, { api: {}, userId: 'agent', onChanged() {}, ticket: { ...ticket, assigned_agent_id: null }, messages, canReply: false, onReply: async () => messages[1], queue: 'unassigned' });
   assert.ok(markup.indexOf('Earlier question') < markup.indexOf('Latest answer'));
   assert.match(markup, /href="\/tickets\/t\/overview\?queue=unassigned"/);
   assert.match(markup, /messages-content/); assert.match(markup, /composer-heading/);

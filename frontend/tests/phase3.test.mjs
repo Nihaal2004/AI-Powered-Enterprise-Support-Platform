@@ -13,13 +13,24 @@ const { InternalNotes } = await import('../src/features/tickets/InternalNotes.ts
 const { TicketControls } = await import('../src/features/tickets/TicketControls.tsx');
 const json = (body, status = 200) => new Response(JSON.stringify(body), { status });
 const ticket = { id: 't', title: 'Help', assigned_agent_id: 'agent', status: 'OPEN', priority: 'MEDIUM' };
-const message = { id: 'm', ticket_id: 't', author_user_id: 'agent', message_type: 'AGENT_REPLY', body: 'Reply', created_at: new Date().toISOString(), edited_at: null, deleted_at: null };
+const message = { id: 'm', ticket_id: 't', author_user_id: 'agent', message_type: 'AGENT_REPLY', body: 'Reply', created_at: new Date().toISOString(), edited_at: null, deleted_at: null, attachments: [] };
 
 function setup(handler) {
   const calls = [];
   globalThis.fetch = async (url, init = {}) => { calls.push({ url, ...init }); return handler(url, init); };
   return { api: ticketApi(new ApiClient(() => {})), calls };
 }
+
+test('conversation renders embedded attachments without separate attachment requests', () => {
+  const attachment = { id: 'a', message_id: 'm', original_filename: 'embedded.txt', size_bytes: 5, mime_type: 'text/plain', upload_status: 'UPLOADED' };
+  const markup = renderToStaticMarkup(createElement(Conversation, {
+    api: {}, userId: 'agent', onChanged() {}, ticket,
+    messages: [{ ...message, attachments: [attachment] }],
+    canReply: true, onReply: async () => message,
+  }));
+  assert.match(markup, /embedded.txt/);
+  assert.match(markup, />Download</);
+});
 
 test('internal note uses a separate route and never posts a conversation message', async () => {
   const note = { id: 'n', body: 'Staff only', author_email: 'support@example.test' };
@@ -77,7 +88,7 @@ test('soft delete preserves backend placeholder and hides actions and attachment
   const deleted = { ...message, body: 'This message was deleted', deleted_at: message.created_at };
   const { api } = setup((url, init) => { assert.equal(init.method, 'DELETE'); return json(deleted); });
   const result = await api.delete('t', 'm');
-  const markup = renderToStaticMarkup(createElement(Conversation, { api, userId: 'agent', revision: 0, onChanged() {}, ticket, messages: [result], canReply: true, onReply: async () => message }));
+  const markup = renderToStaticMarkup(createElement(Conversation, { api, userId: 'agent', onChanged() {}, ticket, messages: [result], canReply: true, onReply: async () => message }));
   assert.match(markup, /This message was deleted/);
   assert.doesNotMatch(markup, />Edit<|>Delete<|Staff only|aria-label="Attachments"/);
 });

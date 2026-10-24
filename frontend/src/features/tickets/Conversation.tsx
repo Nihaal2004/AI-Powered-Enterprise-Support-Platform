@@ -13,8 +13,8 @@ import { ticketPath } from '../../navigation/routes';
 import { Icon } from '../../components/Icon';
 import { isTicketLocked } from './controls';
 const formatTime = (value: string) => new Date(value).toLocaleString();
-export function Conversation({ api, userId, revision, onChanged, ticket, messages, canReply: replyAllowed, onReply, active = true, queue }: {
-  api: TicketApi; userId: string; revision: number; onChanged: () => void;
+export function Conversation({ api, userId, onChanged, ticket, messages, canReply: replyAllowed, onReply, active = true, queue }: {
+  api: TicketApi; userId: string; onChanged: () => void;
   ticket: Ticket; messages: Message[]; canReply: boolean; onReply: (body: string) => Promise<Message>;
   active?: boolean; queue?: Queue;
 }) {
@@ -66,7 +66,7 @@ export function Conversation({ api, userId, revision, onChanged, ticket, message
         <header><strong>{message.message_type === 'AGENT_REPLY' ? message.author_user_id === userId ? 'You' : 'Support agent' : 'Customer'}</strong><time dateTime={message.created_at}>{formatTime(message.created_at)}</time></header>
         <p className={message.deleted_at ? 'deleted' : ''}>{message.body}</p>
         {message.edited_at && !message.deleted_at && <small className="muted">Edited {formatTime(message.edited_at)}</small>}
-        {!message.deleted_at && <Attachments api={api} ticketId={ticket.id} messageId={message.id} revision={revision} />}
+        {!message.deleted_at && <Attachments api={api} ticketId={ticket.id} messageId={message.id} files={message.attachments} />}
         {!locked && <MessageActions api={api} message={message} userId={userId} onChanged={onChanged} />}
       </article></div>)}
     </div></div>

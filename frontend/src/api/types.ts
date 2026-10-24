@@ -11,6 +11,7 @@ export interface Message {
   id: string; ticket_id: string; author_user_id: string;
   message_type: 'CUSTOMER_REPLY' | 'AGENT_REPLY'; body: string;
   created_at: string; edited_at: string | null; deleted_at: string | null;
+  attachments: Attachment[];
 }
 export type Queue = 'unassigned' | 'assigned_to_me';
 export type TicketStatus = 'OPEN' | 'IN_PROGRESS' | 'WAITING_FOR_CUSTOMER' | 'RESOLVED' | 'CLOSED';
